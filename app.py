@@ -445,8 +445,8 @@ def predict_buy_sell_rule(df, rsi_buy=30, rsi_sell=70):
     )
 
     # --- Final signals [CORRECTED LOGIC] ---
-    results["Buy_Point"] = results["Reversal_Buy"] | results["Trend_Buy"] | ew_only_buy
-    results["Sell_Point"] = base_sell_core | ew_only_sell
+    results["Sell_Point"] = results["Reversal_Buy"] | results["Trend_Buy"] | ew_only_buy
+    results["Buy_Point"] = base_sell_core | ew_only_sell
 
     return results
 
