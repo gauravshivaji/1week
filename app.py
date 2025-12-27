@@ -838,7 +838,8 @@ if st.session_state.analysis_run:
                             continue
 
                         proba = clf.predict_proba(row)[0] if hasattr(clf, "predict_proba") else None
-                        pred = clf.predict(row)
+                        pred = clf.predict(row)[0]
+
 
                         rows.append(
                             {
