@@ -3,7 +3,21 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import ta
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
+##########################################################################
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_score, recall_score, f1_score
 
+# Optional XGBoost
+try:
+    from xgboost import XGBClassifier
+    XGB_OK = True
+except Exception:
+    XGB_OK = False
+##########################################################################
 # ML imports (optional)
 try:
     from sklearn.ensemble import RandomForestClassifier
@@ -612,8 +626,72 @@ def train_rf_classifier(X, y, random_state=42):
     report = classification_report(y_test, y_pred, zero_division=0, output_dict=False)
 
     return clf, acc, report
+######################################################3
+def compare_ml_models(X, y):
 
+    models = {
+        "RandomForest": RandomForestClassifier(
+            n_estimators=300,
+            max_depth=6,
+            class_weight="balanced_subsample",
+            random_state=42,
+            n_jobs=-1,
+        ),
 
+        "GradientBoosting": GradientBoostingClassifier(),
+
+        "LogisticRegression": LogisticRegression(max_iter=200)
+    }
+
+    if XGB_OK:
+        models["XGBoost"] = XGBClassifier(
+            n_estimators=300,
+            max_depth=6,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            eval_metric="mlogloss",
+            random_state=42
+        )
+
+    results = []
+
+    stratify_opt = y if len(np.unique(y)) > 1 else None
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        shuffle=True,
+        stratify=stratify_opt,
+        random_state=42,
+    )
+
+    for name, model in models.items():
+
+        try:
+            model.fit(X_train, y_train)
+
+            pred = model.predict(X_test)
+
+            acc = accuracy_score(y_test, pred)
+            precision = precision_score(y_test, pred, average="weighted", zero_division=0)
+            recall = recall_score(y_test, pred, average="weighted", zero_division=0)
+            f1 = f1_score(y_test, pred, average="weighted", zero_division=0)
+
+            results.append({
+                "Model": name,
+                "Accuracy": acc,
+                "Precision": precision,
+                "Recall": recall,
+                "F1 Score": f1
+            })
+
+        except Exception:
+            pass
+
+    return pd.DataFrame(results).sort_values("Accuracy", ascending=False)
+    #######################################################################################3
 def latest_feature_row_for_ticker(ticker, sma_windows, support_window, feature_cols, zz_pct, zz_min_bars):
     hist = load_history_for_ticker(ticker, period="5y", interval="1wk")
     if hist is None or hist.empty:
@@ -824,7 +902,24 @@ if st.session_state.analysis_run:
                     st.warning("Not enough historical data to train the ML model for the chosen settings.")
                 else:
                     clf, acc, report = train_rf_classifier(X, y)
+                    
                     st.caption(f"Validation accuracy (holdout): **{acc:.3f}**")
+                    #######################################################################################
+                    st.subheader("📊 ML Model Comparison")
+
+                    with st.spinner("Training multiple ML models..."):
+                        comp_df = compare_ml_models(X, y)
+
+                    if not comp_df.empty:
+                        st.dataframe(
+        comp_df,
+        use_container_width=True
+    )
+
+                    else:
+                        st.warning("Model comparison could not be generated.")
+                        #############################################################################
+                    
 
                     with st.expander("Classification report"):
                         st.text(report)
