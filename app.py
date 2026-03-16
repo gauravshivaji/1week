@@ -640,7 +640,7 @@ def compare_ml_models(X, y):
 
         "GradientBoosting": GradientBoostingClassifier(),
 
-        "LogisticRegression": LogisticRegression(max_iter=200)
+       
     }
 
     if XGB_OK:
